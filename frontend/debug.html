@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SVG Path Debug</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .debug { margin: 10px 0; padding: 10px; background: #f0f0f0; }
+        svg { border: 1px solid #ccc; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>SVG Path Debug Test</h1>
+    
+    <button onclick="testAPI()">Test API Call</button>
+    <button onclick="testSVGParsing()">Test SVG Parsing</button>
+    
+    <div id="output"></div>
+    
+    <script>
+        async function testAPI() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<div class="debug">Testing API...</div>';
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: 'red square', use_gemini: true })
+                });
+                
+                const data = await response.json();
+                output.innerHTML += `<div class="debug">API Response: ${JSON.stringify(data, null, 2)}</div>`;
+                
+                if (data.svg_path) {
+                    testSVGPath(data.svg_path);
+                }
+            } catch (error) {
+                output.innerHTML += `<div class="debug">API Error: ${error}</div>`;
+            }
+        }
+        
+        function testSVGPath(pathString) {
+            const output = document.getElementById('output');
+            output.innerHTML += `<div class="debug">Testing SVG Path: ${pathString}</div>`;
+            
+            // Create SVG to visualize
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', '200');
+            svg.setAttribute('height', '200');
+            svg.setAttribute('viewBox', '0 0 100 100');
+            svg.style.border = '1px solid red';
+            
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', pathString);
+            path.setAttribute('stroke', 'red');
+            path.setAttribute('fill', 'none');
+            path.setAttribute('stroke-width', '2');
+            
+            svg.appendChild(path);
+            output.appendChild(svg);
+            
+            // Test point generation
+            try {
+                const pathLength = path.getTotalLength();
+                output.innerHTML += `<div class="debug">Path Length: ${pathLength}</div>`;
+                
+                const points = [];
+                for (let i = 0; i <= 20; i++) {
+                    const distance = (i / 20) * pathLength;
+                    const point = path.getPointAtLength(distance);
+                    points.push({x: point.x, y: point.y});
+                }
+                
+                output.innerHTML += `<div class="debug">Generated ${points.length} points: ${JSON.stringify(points.slice(0, 5))}...</div>`;
+                
+                // Add points to SVG
+                points.forEach(point => {
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', point.x);
+                    circle.setAttribute('cy', point.y);
+                    circle.setAttribute('r', '1');
+                    circle.setAttribute('fill', 'blue');
+                    svg.appendChild(circle);
+                });
+                
+            } catch (error) {
+                output.innerHTML += `<div class="debug">SVG Error: ${error}</div>`;
+            }
+        }
+        
+        function testSVGParsing() {
+            testSVGPath('M 20 20 L 80 20 L 80 80 L 20 80 Z');
+        }
+    </script>
+</body>
+</html>
